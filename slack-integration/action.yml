@@ -1,0 +1,78 @@
+name: "Slack Notification"
+description: "Send a notification to Slack"
+inputs:
+  change-log-file-path:
+    description: "Path to the change log file"
+    required: true
+  version:
+    description: "Version of the release"
+    required: true
+  slack-channel-id:
+    description: "Slack channel ID to send the notification to"
+    required: true
+  slack-bot-token:
+    description: "Slack bot token for authentication"
+    required: true
+  release-name:
+    description: "Name of the release URL (optional)"
+    required: false
+
+runs: "composite"
+steps:
+  - name: Prepare release link
+    id: prepare-release-link
+    shell: bash
+    run: |
+      if [ -z "${{ inputs.release-name }}" ]; then
+        RELEASE_LINK="${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.version }}"
+      else
+        RELEASE_LINK="${{ inputs.release-name }}"
+      fi
+      echo "RELEASE_LINK=$RELEASE_LINK" >> $GITHUB_ENV
+  - name: Read version file
+    id: read-version-content
+    run: |
+      VERSION_CONTENT=$(jq -Rs '.' < ${{ inputs.change-log-file-path }})
+      echo "VERSION_CONTENT=$VERSION_CONTENT" >> $GITHUB_ENV
+  - name: Post text to a Slack channel
+    uses: slackapi/slack-github-action@v2.0.0
+    with:
+      method: chat.postMessage
+      token: ${{ inputs.slack-bot-token }}
+      payload: |
+        {
+          "channel": "${{ inputs.slack-channel-id }}",
+          "blocks": [
+            {
+              "type": "header",
+              "text": {
+                "type": "plain_text",
+                "text": "New version is released for ${{ github.repository }}!"
+              }
+            },
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "_Version Info: ${{ inputs.version }}_"
+              }
+            },
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "_Release Link: _<${{ env.RELEASE_LINK }}>"
+              }
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": ${{ env.VERSION_CONTENT }}
+              }
+            }
+          ]
+        }
