@@ -1,0 +1,29 @@
+name: Create Release for an Action
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number (e.g. v1.2.3)"
+        required: true
+        type: string
+      action:
+        description: "Action folder name (e.g. slack-notifier)"
+        required: true
+        type: string
+
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create GitHub Release for the action
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.version }}-${{ github.event.inputs.action }}
+          release_name: Release ${{ github.event.inputs.version }} for ${{ github.event.inputs.action }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
