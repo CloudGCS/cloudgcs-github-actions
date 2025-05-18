@@ -38,6 +38,7 @@ runs:
 
     - name: Read version file
       id: read-version-content
+      shell: bash
       env:
         CHANGE_LOG_PATH: ${{ inputs.change-log-file-path }}
       run: |
