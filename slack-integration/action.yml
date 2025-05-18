@@ -42,8 +42,7 @@ runs:
       env:
         CHANGE_LOG_PATH: ${{ inputs.change-log-file-path }}
       run: |
-        echo "Change Log File Path: $CHANGE_LOG_PATH"
-        if [ -f "CHANGE_LOG_PATH" ]; then
+        if [ -f "$CHANGE_LOG_PATH" ]; then
           echo "Given Change Log File Path Exists. Reading the file..."
         else
           echo "Given Change Log File Path Does Not Exist!"
