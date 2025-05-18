@@ -40,9 +40,11 @@ runs:
       id: read-version-content
       shell: bash
       env:
-        CHANGE_LOG_PATH: ${{ inputs.change-log-file-path }}
+        change-log-path: ${{ inputs.change-log-file-path }}
       run: |
-        if [ -f "$CHANGE_LOG_PATH" ]; then
+        echo "Reading the change log file..."
+        echo "Change Log File Path: $change-log-path"
+        if [ -f "$change-log-path" ]; then
           echo "Given Change Log File Path Exists. Reading the file..."
         else
           echo "Given Change Log File Path Does Not Exist!"
