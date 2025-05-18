@@ -17,68 +17,78 @@ inputs:
     description: "Name of the release URL (optional)"
     required: false
 
-runs: "composite"
-steps:
-  - name: Prepare release link
-    id: prepare-release-link
-    shell: bash
-    run: |
-      if [ -z "${{ inputs.release-name }}" ]; then
-        RELEASE_LINK="${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.version }}"
-      else
-        RELEASE_LINK="${{ inputs.release-name }}"
-      fi
-      echo "RELEASE_LINK=$RELEASE_LINK" >> $GITHUB_ENV
-  - name: Read version file
-    id: read-version-content
-    run: |
-      if [ -f "${{ inputs.change-log-file-path }}" ]; then
+runs:
+  using: "composite"
+  steps:
+    - name: Prepare release link
+      id: prepare-release-link
+      shell: bash
+      env:
+        RELEASE_NAME: ${{ inputs.release-name }}
+        VERSION: ${{ inputs.version }}
+        GITHUB_SERVER_URL: ${{ github.server_url }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: |
+        if [ -z "$RELEASE_NAME" ]; then
+          RELEASE_LINK="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$VERSION"
+        else
+          RELEASE_LINK="$RELEASE_NAME"
+        fi
+        echo "RELEASE_LINK=$RELEASE_LINK" >> $GITHUB_ENV
+
+    - name: Read version file
+      id: read-version-content
+      env:
+        CHANGE_LOG_PATH: ${{ inputs.change-log-file-path }}
+      run: |
+        if [ -f "$CHANGE_LOG_PATH" ]; then
           echo "Given Change Log File Path Exists. Reading the file..."
-      else
-        echo "Given Change Log File Path Does Not Exists !!!!."
-        exit 1
-      fi
-      VERSION_CONTENT=$(jq -Rs '.' < ${{ inputs.change-log-file-path }})
-      echo "VERSION_CONTENT=$VERSION_CONTENT" >> $GITHUB_ENV
-  - name: Post text to a Slack channel
-    uses: slackapi/slack-github-action@v2.0.0
-    with:
-      method: chat.postMessage
-      token: ${{ inputs.slack-bot-token }}
-      payload: |
-        {
-          "channel": "${{ inputs.slack-channel-id }}",
-          "blocks": [
-            {
-              "type": "header",
-              "text": {
-                "type": "plain_text",
-                "text": "New version is released for ${{ github.repository }}!"
+        else
+          echo "Given Change Log File Path Does Not Exist!"
+          exit 1
+        fi
+        VERSION_CONTENT=$(jq -Rs '.' < "$CHANGE_LOG_PATH")
+        echo "VERSION_CONTENT=$VERSION_CONTENT" >> $GITHUB_ENV
+
+    - name: Post text to a Slack channel
+      uses: slackapi/slack-github-action@v2.0.0
+      with:
+        method: chat.postMessage
+        token: ${{ inputs.slack-bot-token }}
+        payload: |
+          {
+            "channel": "${{ inputs.slack-channel-id }}",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "New version is released for ${{ github.repository }}!"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "_Version Info: ${{ inputs.version }}_"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "_Release Link: _<${{ env.RELEASE_LINK }}>"
+                }
+              },
+              {
+                "type": "divider"
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": ${{ env.VERSION_CONTENT }}
+                }
               }
-            },
-            {
-              "type": "section",
-              "text": {
-                "type": "mrkdwn",
-                "text": "_Version Info: ${{ inputs.version }}_"
-              }
-            },
-            {
-              "type": "section",
-              "text": {
-                "type": "mrkdwn",
-                "text": "_Release Link: _<${{ env.RELEASE_LINK }}>"
-              }
-            },
-            {
-              "type": "divider"
-            },
-            {
-              "type": "section",
-              "text": {
-                "type": "mrkdwn",
-                "text": ${{ env.VERSION_CONTENT }}
-              }
-            }
-          ]
-        }
+            ]
+          }
