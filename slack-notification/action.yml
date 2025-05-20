@@ -1,7 +1,7 @@
 name: "Slack Notification"
 description: "Send a notification to Slack"
 inputs:
-  change-log-file-path:
+  change-log-file-full-path:
     description: "Path to the change log file"
     required: true
   version:
