@@ -39,16 +39,14 @@ runs:
     - name: Read version file
       id: read-version-content
       shell: bash
-      env:
-        CHANGE_LOG_PATH: ${{ inputs.change-log-file-path }}
       run: |
-        if [ -f "$CHANGE_LOG_PATH" ]; then
+        if [ -f "${{ inputs.change-log-file-path }}" ]; then
           echo "Given Change Log File Path Exists. Reading the file..."
         else
           echo "Given Change Log File Path Does Not Exist!"
           exit 1
         fi
-        VERSION_CONTENT=$(jq -Rs '.' < "$CHANGE_LOG_PATH")
+        VERSION_CONTENT=$(jq -Rs '.' < "${{ inputs.change-log-file-path }}")
         echo "VERSION_CONTENT=$VERSION_CONTENT" >> $GITHUB_ENV
 
     - name: Post text to a Slack channel
