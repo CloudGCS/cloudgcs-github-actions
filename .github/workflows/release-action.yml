@@ -19,6 +19,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Echo Action Name And Version
+        run: |
+          echo "Action Name: ${{ github.event.inputs.action }}"
+          echo "Version: ${{ github.event.inputs.version }}"
+
       - name: Create GitHub Release for the action
         id: create_release
         uses: actions/create-release@v1

@@ -1,0 +1,12 @@
+name: "Get Project Version"
+description: "Return the project version"
+inputs:
+  project-version-file-full-path: # id of input
+    description: "The full path to the project version file to read (e.g., package.json)"
+    required: true
+outputs:
+  version: # id of output
+    description: "The project version"
+runs:
+  using: "node20"
+  main: "index.js"
