@@ -1,0 +1,86 @@
+name: "Pre Setup for Plugin Release"
+description: "This action prepares the environment for building a plugin"
+
+inputs:
+  notify-slack:
+    description: "Notify Slack channel about the change log"
+    required: true
+  include_mc:
+    description: "Include Mission Controller Plugin in the build"
+    required: true
+  include_ps:
+    description: "Include Pilot Station Plugin in the build"
+    required: true
+  ps_path:
+    description: "Path to the Pilot Station plugin"
+    required: true
+  mc_path:
+    description: "Path to the Mission Controller plugin"
+    required: true
+  mc_csproj_path:
+    description: "Path to the Mission Controller .csproj file"
+    required: true
+
+outputs:
+  change_log_file_full_path:
+    description: "Full path to the change log file"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get MC Project Version
+      id: get-mc-project-version
+      uses: CloudGCS/cloudgcs-github-actions/get-project-version@1.0-get-project-version
+      with:
+        project-version-file-full-path: ${{ inputs.mc_csproj_path }}
+
+    - name: Get PS Project Version
+      id: get-ps-project-version
+      uses: CloudGCS/cloudgcs-github-actions/get-project-version@1.0-get-project-version
+      with:
+        project-version-file-full-path: ${{ inputs.ps_path }}/package.json
+
+    - name: Check MC and PS versions
+      if: ${{ inputs.include_mc == 'true' && inputs.include_ps == 'true' }}
+      shell: bash
+      run: |
+        mc_plugin_version=${{ steps.get-mc-project-version.outputs.version }}
+        ps_plugin_version=${{ steps.get-ps-project-version.outputs.version }}
+
+        if [ "$mc_plugin_version" != "$ps_plugin_version" ]; then
+          echo "MC and PS versions do not match: MC=$mc_plugin_version, PS=$ps_plugin_version"
+          exit 1
+        else
+          echo "MC and PS versions match: $ps_plugin_version"
+        fi
+
+    - name: Check MC and PS Plugin Name
+      shell: bash
+      if: ${{ inputs.include_mc == 'true' && inputs.include_ps == 'true' }}
+      run: |
+        mc_plugin_name=$(grep -oPm1 "(?<=<PluginName>)[^<]+" < ${{ inputs.mc_csproj_path }})
+        ps_plugin_name=$(jq -r '.name' ${{ inputs.ps_path }}/package.json)
+
+        if [ "$mc_plugin_name" != "$ps_plugin_name" ]; then
+          echo "Plugin names do not match: MC=$mc_plugin_name, PS=$ps_plugin_name"
+          exit 1
+        else
+          echo "Plugin names match: $ps_plugin_name"
+        fi
+
+    - name: Create Change Log Env Path
+      shell: bash
+      if: ${{ inputs.notify-slack == 'true' }}
+      id: create-change_log_file_full_path
+      run: |
+        echo "change_log_file_full_path=change-logs/${{ steps.get-ps-project-version.outputs.version }}/change-log.txt" >> $GITHUB_OUTPUT
+
+    - name: Check Change Log file
+      shell: bash
+      id: check-change-log-file
+      if: ${{ inputs.notify-slack == 'true' }}
+      run: |
+        if [ ! -f "${{ steps.create-change_log_file_full_path.outputs.change_log_file_full_path }}" ]; then
+          echo "Change log file does not exist. Please create it under the change-logs directory."
+          exit 1
+        fi
