@@ -17,6 +17,11 @@ inputs:
     description: "GitHub token or password for NuGet source"
     required: true
 
+outputs:
+  artifact_name:
+    description: "Name of the uploaded artifact"
+    value: "${{ inputs.project_name }}-mc.zip"
+
 runs:
   using: "composite"
   steps:
@@ -43,7 +48,7 @@ runs:
       shell: bash
       run: |
         cd build-output
-        zip -r ../${{ inputs.project_name }}-linux.zip .
+        zip -r ../${{ inputs.project_name }}-mc.zip ./build-output
 
     - name: Upload artifact for Linux
       uses: actions/upload-artifact@v4
