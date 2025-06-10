@@ -1,0 +1,52 @@
+name: "Build MC Plugin"
+description: "Builds the Mission Controller plugin for Linux and uploads as an artifact."
+inputs:
+  mc_path:
+    description: "Path to the Mission Controller plugin directory"
+    required: true
+  mc_csproj_path:
+    description: "Path to the Mission Controller .csproj file (relative to repo root)"
+    required: true
+  project_name:
+    description: "Project name for the artifact"
+    required: true
+  github-username:
+    description: "GitHub username for NuGet source"
+    required: true
+  github-token:
+    description: "GitHub token or password for NuGet source"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: "8.0.x"
+
+    - name: Restore dependencies
+      shell: bash
+      run: |
+        cd "${{ inputs.mc_path }}"
+        dotnet nuget add source --username "${{ inputs.github-username }}" --password "${{ inputs.github-token }}" --store-password-in-clear-text --name cloudgcs-repo "https://nuget.pkg.github.com/CloudGCS/index.json"
+        dotnet restore
+
+    - name: Build Mission Controller Plugin
+      shell: bash
+      run: dotnet build "${{ inputs.mc_csproj_path }}" -o ./build-output
+
+    - name: Create ZIP file
+      shell: bash
+      run: |
+        cd build-output
+        zip -r ../${{ inputs.project_name }}-linux.zip .
+
+    - name: Upload artifact for Linux
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.project_name }}-mc
+        path: build-output/${{ inputs.project_name }}-mc.zip
