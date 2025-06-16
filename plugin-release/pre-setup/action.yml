@@ -24,6 +24,10 @@ inputs:
 outputs:
   change_log_file_full_path:
     description: "Full path to the change log file"
+  plugin_name:
+    description: "Name of the plugin extracted from the MC and PS project files"
+  version:
+    description: "Version of the plugin extracted from the MC and PS project files"
 
 runs:
   using: "composite"
@@ -69,6 +73,7 @@ runs:
           exit 1
         else
           echo "MC and PS versions match: $ps_plugin_version"
+          echo "version=$ps_plugin_version" >> $GITHUB_OUTPUT
         fi
 
     - name: Check MC and PS Plugin Name
@@ -83,6 +88,7 @@ runs:
           exit 1
         else
           echo "Plugin names match: $ps_plugin_name"
+          echo "plugin_name=$ps_plugin_name" >> $GITHUB_OUTPUT
         fi
 
     - name: Create Change Log Env Path
