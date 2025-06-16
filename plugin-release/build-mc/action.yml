@@ -20,7 +20,7 @@ inputs:
 outputs:
   artifact_name:
     description: "Name of the uploaded artifact"
-    value: "${{ inputs.project_name }}-mc.zip"
+    value: "${{ steps.create-zip.outputs.zip_name }}"
 
 runs:
   using: "composite"
@@ -45,13 +45,16 @@ runs:
       run: dotnet build "${{ inputs.mc_csproj_path }}" -o ./build-output
 
     - name: Create ZIP file
+      id: create-zip
       shell: bash
       run: |
         cd build-output
-        zip -r ../${{ inputs.project_name }}-mc.zip ./build-output
+        echo zip_name="${{ inputs.project_name }}-mc.zip" >> GITHUB_OUTPUT
+        ZIP_NAME="${{ inputs.project_name }}-mc-plugin.zip"
+        zip -r "$ZIP_NAME" ./*
 
     - name: Upload artifact for Linux
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.project_name }}-mc
-        path: build-output/${{ inputs.project_name }}-mc.zip
+        path: build-output/${{ steps.create-zip.outputs.zip_name }}

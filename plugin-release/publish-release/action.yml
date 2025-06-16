@@ -1,0 +1,58 @@
+name: "Pre Setup for Plugin Release"
+description: "This action prepares the environment for building a plugin"
+
+inputs:
+  include_mc:
+    description: "Include Mission Controller Plugin in the build"
+    required: true
+  include_ps:
+    description: "Include Pilot Station Plugin in the build"
+    required: true
+  ps_plugin_build_name:
+    description: "Build name for the Pilot Station plugin to be used in the artifact"
+    required: true
+  mc_plugin_build_name:
+    description: "Build name for the Mission Controller plugin to be used in the artifact"
+    required: true
+
+upload-artifacts:
+  runs-on: ubuntu-latest
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Create installation folder
+      id: create_folder
+      run: |
+        INSTALLATION_PATH="installation-${{ github.event.inputs.update_version }}"
+        mkdir -p $INSTALLATION_PATH
+        echo "installation_path=$INSTALLATION_PATH" >> $GITHUB_OUTPUT
+
+    - name: Set today's date
+      id: set-today
+      run: echo "today=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+    - name: Download PS Plugin Artifact
+      if: ${{ inputs.include_ps == 'true' }}
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.ps_plugin_build_name }}
+        path: ${{ steps.create_folder.outputs.installation_path }}
+
+    - name: Download MC Plugin Artifact
+      if: ${{ inputs.include_mc == 'true' }}
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.mc_plugin_build_name }}
+        path: ${{ steps.create_folder.outputs.installation_path }}
+
+    - name: Upload Artifacts to Release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        release_name: "Release: ${{ github.event.inputs.update_version }}"
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ${{ steps.create_folder.outputs.installation_path }}/**
+        tag: ${{ github.event.inputs.update_version }}-${{ github.ref_name }}
+        body: "Release created on ${{ steps.set-today.outputs.today }}"
+        file_glob: true
+        overwrite: false
