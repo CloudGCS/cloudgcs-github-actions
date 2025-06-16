@@ -35,7 +35,7 @@ runs:
       run: |
         cd "${{ inputs.mc_path }}"
         dotnet nuget add source --username "${{ inputs.github-username }}" --password "${{ inputs.github-token }}" --store-password-in-clear-text --name cloudgcs-repo "https://nuget.pkg.github.com/CloudGCS/index.json"
-        dotnet restore "${{ inputs.mc_csproj_path }}"
+        dotnet restore
 
     - name: Build Mission Controller Plugin
       shell: bash
