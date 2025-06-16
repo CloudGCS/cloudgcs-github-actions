@@ -35,7 +35,7 @@ runs:
       run: |
         cd "${{ inputs.mc_path }}"
         dotnet nuget add source --username "${{ inputs.github-username }}" --password "${{ inputs.github-token }}" --store-password-in-clear-text --name cloudgcs-repo "https://nuget.pkg.github.com/CloudGCS/index.json"
-        dotnet restore
+        dotnet restore "${{ inputs.mc_csproj_path }}"
 
     - name: Build Mission Controller Plugin
       shell: bash
@@ -45,13 +45,13 @@ runs:
       id: create-zip
       shell: bash
       run: |
+        ZIP_NAME="${{ inputs.project_name }}-mc.zip"
+        echo "zip_name=$ZIP_NAME" >> GITHUB_OUTPUT
         cd build-output
-        echo zip_name="${{ inputs.project_name }}-mc.zip" >> GITHUB_OUTPUT
-        ZIP_NAME="${{ inputs.project_name }}-mc-plugin.zip"
-        zip -r "$ZIP_NAME" ./*
+        zip -r "../$ZIP_NAME" ./*
 
     - name: Upload artifact for Linux
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.project_name }}-mc
-        path: build-output/${{ steps.create-zip.outputs.zip_name }}
+        path: ./${{ steps.create-zip.outputs.zip_name }}
