@@ -47,13 +47,13 @@ runs:
 
     - name: Get MC Project Version
       id: get-mc-project-version
-      uses: CloudGCS/cloudgcs-github-actions/get-project-version@1.0-get-project-version
+      uses: CloudGCS/cloudgcs-github-actions/get-project-version@1.1-get-project-version
       with:
         project-version-file-full-path: ./${{ inputs.mc_csproj_path }}
 
     - name: Get PS Project Version
       id: get-ps-project-version
-      uses: CloudGCS/cloudgcs-github-actions/get-project-version@1.0-get-project-version
+      uses: CloudGCS/cloudgcs-github-actions/get-project-version@1.1-get-project-version
       with:
         project-version-file-full-path: ./${{ inputs.ps_path }}/package.json
 
