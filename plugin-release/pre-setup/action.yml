@@ -24,10 +24,13 @@ inputs:
 outputs:
   change_log_file_full_path:
     description: "Full path to the change log file"
+    value: ${{ steps.create-change_log_file_full_path.outputs.change_log_file_full_path }}
   plugin_name:
     description: "Name of the plugin extracted from the MC and PS project files"
+    value: ${{ steps.set-plugin-name.outputs.plugin_name }}
   version:
     description: "Version of the plugin extracted from the MC and PS project files"
+    value: ${{ steps.check-mc-and-ps-versions.outputs.version }}
 
 runs:
   using: "composite"
@@ -63,6 +66,7 @@ runs:
 
     - name: Check MC and PS versions
       if: ${{ inputs.include_mc == 'true' && inputs.include_ps == 'true' }}
+      id: check-mc-and-ps-versions
       shell: bash
       run: |
         mc_plugin_version=${{ steps.get-mc-project-version.outputs.version }}
@@ -91,6 +95,7 @@ runs:
         fi
 
     - name: Set Plugin Name Output
+      id: set-plugin-name
       shell: bash
       run: |
         if [ "${{ inputs.include_mc }}" = "true" ]; then
