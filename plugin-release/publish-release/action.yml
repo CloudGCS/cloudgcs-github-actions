@@ -14,6 +14,12 @@ inputs:
   mc_plugin_build_name:
     description: "Build name for the Mission Controller plugin to be used in the artifact"
     required: false
+  github_token:
+    description: "GitHub token for authentication"
+    required: true
+  version:
+    description: "Version of the plugin to be used in the release"
+    required: true
 
 upload-artifacts:
   runs-on: ubuntu-latest
@@ -41,7 +47,7 @@ upload-artifacts:
     - name: Create installation folder
       id: create_folder
       run: |
-        INSTALLATION_PATH="installation-${{ github.event.inputs.update_version }}"
+        INSTALLATION_PATH="installation"
         mkdir -p $INSTALLATION_PATH
         echo "installation_path=$INSTALLATION_PATH" >> $GITHUB_OUTPUT
 
@@ -66,10 +72,10 @@ upload-artifacts:
     - name: Upload Artifacts to Release
       uses: svenstaro/upload-release-action@v2
       with:
-        release_name: "Release: ${{ github.event.inputs.update_version }}"
+        release_name: "Release: ${{ github.event.inputs.version }}"
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ steps.create_folder.outputs.installation_path }}/**
-        tag: ${{ github.event.inputs.update_version }}-${{ github.ref_name }}
+        tag: ${{ github.event.inputs.version }}-${{ github.ref_name }}
         body: "Release created on ${{ steps.set-today.outputs.today }}"
         file_glob: true
         overwrite: false
