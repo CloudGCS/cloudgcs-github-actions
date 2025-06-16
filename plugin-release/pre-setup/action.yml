@@ -13,13 +13,13 @@ inputs:
     required: true
   ps_path:
     description: "Path to the Pilot Station plugin"
-    required: true
+    required: false
   mc_path:
     description: "Path to the Mission Controller plugin"
-    required: true
+    required: false
   mc_csproj_path:
     description: "Path to the Mission Controller .csproj file"
-    required: true
+    required: false
 
 outputs:
   change_log_file_full_path:
@@ -28,6 +28,22 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Check inputs
+      shell: bash
+      run: |
+        if [ "${{ inputs.include_mc }}" = "true" ]; then
+          if [ -z "${{ inputs.mc_csproj_path }}" ] || [ -z "${{ inputs.mc_path }}" ]; then
+            echo "When include_mc is true, both mc_csproj_path and mc_path must be set."
+            exit 1
+          fi
+        fi
+        if [ "${{ inputs.include_ps }}" = "true" ]; then
+          if [ -z "${{ inputs.ps_path }}" ]; then
+            echo "When include_ps is true, ps_path must be set."
+            exit 1
+          fi
+        fi
+
     - name: Get MC Project Version
       id: get-mc-project-version
       uses: CloudGCS/cloudgcs-github-actions/get-project-version@1.0-get-project-version
