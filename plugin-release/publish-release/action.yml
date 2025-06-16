@@ -6,11 +6,9 @@ on:
       include_mc:
         description: "Include Mission Controller Plugin in the build"
         required: true
-        default: "true"
       include_ps:
         description: "Include Pilot Station Plugin in the build"
         required: true
-        default: "true"
       version:
         description: "Version of the plugin to be used in the release"
         required: true
@@ -24,62 +22,60 @@ on:
         description: "Build name for the Mission Controller plugin to be used in the artifact"
         required: false
 
-jobs:
-  upload-artifacts:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Check Inputs
-        id: check-inputs
-        shell: bash
-        run: |
-          if [ "${{ github.event.inputs.include_mc }}" = "true" ]; then
-            if [ -z "${{ github.event.inputs.mc_plugin_build_name }}" ]; then
-              echo "When include_mc is true, mc_plugin_build_name must be set."
-              exit 1
-            fi
+runs:
+  using: "composite"
+  steps:
+    - name: Check Inputs
+      id: check-inputs
+      shell: bash
+      run: |
+        if [ "${{ inputs.include_mc }}" = "true" ]; then
+          if [ -z "${{ inputs.mc_plugin_build_name }}" ]; then
+            echo "When include_mc is true, mc_plugin_build_name must be set."
+            exit 1
           fi
-          if [ "${{ github.event.inputs.include_ps }}" = "true" ]; then
-            if [ -z "${{ github.event.inputs.ps_plugin_build_name }}" ]; then
-              echo "When include_ps is true, ps_plugin_build_name must be set."
-              exit 1
-            fi
+        fi
+        if [ "${{ inputs.include_ps }}" = "true" ]; then
+          if [ -z "${{ inputs.ps_plugin_build_name }}" ]; then
+            echo "When include_ps is true, ps_plugin_build_name must be set."
+            exit 1
           fi
+        fi
 
-      - name: Create installation folder
-        id: create_folder
-        run: |
-          INSTALLATION_PATH="installation"
-          mkdir -p $INSTALLATION_PATH
-          echo "installation_path=$INSTALLATION_PATH" >> $GITHUB_OUTPUT
+    - name: Create installation folder
+      id: create_folder
+      shell: bash
+      run: |
+        INSTALLATION_PATH="installation"
+        mkdir -p $INSTALLATION_PATH
+        echo "installation_path=$INSTALLATION_PATH" >> $GITHUB_OUTPUT
 
-      - name: Set today's date
-        id: set-today
-        run: echo "today=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+    - name: Set today's date
+      id: set-today
+      shell: bash
+      run: echo "today=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
-      - name: Download PS Plugin Artifact
-        if: ${{ github.event.inputs.include_ps == 'true' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ github.event.inputs.ps_plugin_build_name }}
-          path: ${{ steps.create_folder.outputs.installation_path }}
+    - name: Download PS Plugin Artifact
+      if: ${{ inputs.include_ps == 'true' }}
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.ps_plugin_build_name }}
+        path: installation
 
-      - name: Download MC Plugin Artifact
-        if: ${{ github.event.inputs.include_mc == 'true' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ github.event.inputs.mc_plugin_build_name }}
-          path: ${{ steps.create_folder.outputs.installation_path }}
+    - name: Download MC Plugin Artifact
+      if: ${{ inputs.include_mc == 'true' }}
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.mc_plugin_build_name }}
+        path: installation
 
-      - name: Upload Artifacts to Release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          release_name: "Release: ${{ github.event.inputs.version }}"
-          repo_token: ${{ inputs.GITHUB_TOKEN }}
-          file: ${{ steps.create_folder.outputs.installation_path }}/**
-          tag: ${{ github.event.inputs.version }}-${{ github.ref_name }}
-          body: "Release created on ${{ steps.set-today.outputs.today }}"
-          file_glob: true
-          overwrite: false
+    - name: Upload Artifacts to Release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        release_name: "Release: ${{ github.event.inputs.version }}"
+        repo_token: ${{ inputs.GITHUB_TOKEN }}
+        file: ${{ steps.create_folder.outputs.installation_path }}/**
+        tag: ${{ github.event.inputs.version }}-${{ github.ref_name }}
+        body: "Release created on ${{ steps.set-today.outputs.today }}"
+        file_glob: true
+        overwrite: false
