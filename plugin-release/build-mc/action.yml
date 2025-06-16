@@ -53,5 +53,5 @@ runs:
     - name: Upload artifact for Linux
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.project_name }}-mc
+        name: ${{ steps.create-zip.outputs.zip_name }}
         path: ./${{ steps.create-zip.outputs.zip_name }}
