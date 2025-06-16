@@ -20,7 +20,7 @@ inputs:
 outputs:
   artifact_name:
     description: "Name of the uploaded artifact"
-    value: "${{ steps.create-zip.outputs.zip_name }}"
+    value: "${{ inputs.project_name }}-mc"
 
 runs:
   using: "composite"
