@@ -1,26 +1,24 @@
 name: Publish Release
 
-on:
-  workflow_dispatch:
-    inputs:
-      include_mc:
-        description: "Include Mission Controller Plugin in the build"
-        required: true
-      include_ps:
-        description: "Include Pilot Station Plugin in the build"
-        required: true
-      version:
-        description: "Version of the plugin to be used in the release"
-        required: true
-      github_token:
-        description: "Version of the plugin to be used in the release"
-        required: true,
-      ps_plugin_build_name:
-        description: "Build name for the Pilot Station plugin to be used in the artifact"
-        required: false
-      mc_plugin_build_name:
-        description: "Build name for the Mission Controller plugin to be used in the artifact"
-        required: false
+inputs:
+  include_mc:
+    description: "Include Mission Controller Plugin in the build"
+    required: true
+  include_ps:
+    description: "Include Pilot Station Plugin in the build"
+    required: true
+  version:
+    description: "Version of the plugin to be used in the release"
+    required: true
+  github_token:
+    description: "Version of the plugin to be used in the release"
+    required: true,
+  ps_plugin_build_name:
+    description: "Build name for the Pilot Station plugin to be used in the artifact"
+    required: false
+  mc_plugin_build_name:
+    description: "Build name for the Mission Controller plugin to be used in the artifact"
+    required: false
 
 runs:
   using: "composite"
@@ -72,10 +70,10 @@ runs:
     - name: Upload Artifacts to Release
       uses: svenstaro/upload-release-action@v2
       with:
-        release_name: "Release: ${{ github.event.inputs.version }}"
+        release_name: "Release ${{ inputs.version }}"
         repo_token: ${{ inputs.GITHUB_TOKEN }}
         file: ${{ steps.create_folder.outputs.installation_path }}/**
-        tag: ${{ github.event.inputs.version }}-${{ github.ref_name }}
+        tag: ${{ inputs.version }}
         body: "Release created on ${{ steps.set-today.outputs.today }}"
         file_glob: true
         overwrite: false
