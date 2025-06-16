@@ -3,7 +3,6 @@ const fs = require("fs");
 const path = require("path");
 
 try {
-  core.warning("This action is DEPRECATED and will be removed in a future release. Please use 'Get Project Information'");
   let version = null;
   const pkgPath = core.getInput("project-version-file-full-path");
 
