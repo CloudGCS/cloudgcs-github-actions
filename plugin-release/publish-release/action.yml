@@ -11,15 +11,18 @@ on:
         description: "Include Pilot Station Plugin in the build"
         required: true
         default: "true"
+      version:
+        description: "Version of the plugin to be used in the release"
+        required: true
+      github_token:
+        description: "Version of the plugin to be used in the release"
+        required: true,
       ps_plugin_build_name:
         description: "Build name for the Pilot Station plugin to be used in the artifact"
         required: false
       mc_plugin_build_name:
         description: "Build name for the Mission Controller plugin to be used in the artifact"
         required: false
-      version:
-        description: "Version of the plugin to be used in the release"
-        required: true
 
 jobs:
   upload-artifacts:
@@ -74,7 +77,7 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           release_name: "Release: ${{ github.event.inputs.version }}"
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ inputs.GITHUB_TOKEN }}
           file: ${{ steps.create_folder.outputs.installation_path }}/**
           tag: ${{ github.event.inputs.version }}-${{ github.ref_name }}
           body: "Release created on ${{ steps.set-today.outputs.today }}"
