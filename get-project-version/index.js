@@ -14,7 +14,11 @@ try {
       core.info(`Found version in ${pkgPath}: ${version}`);
     } else if (pkgPath.endsWith(".csproj")) {
       const csprojContent = fs.readFileSync(pkgPath, "utf8");
-      const match = csprojContent.match(/<Version>(.*?)<\/Version>/);
+      // Try PluginVersion first, then Version
+      let match = csprojContent.match(/<PluginVersion>(.*?)<\/PluginVersion>/);
+      if (!match || !match[1]) {
+        match = csprojContent.match(/<Version>(.*?)<\/Version>/);
+      }
       if (match && match[1]) {
         version = match[1];
         core.info(`Found version in ${pkgPath}: ${version}`);
@@ -28,8 +32,11 @@ try {
     if (csprojFile) {
       const csprojPath = path.join(process.cwd(), csprojFile);
       const csprojContent = fs.readFileSync(csprojPath, "utf8");
-      const match = csprojContent.match(/<Version>(.*?)<\/Version>/);
-
+      // Try PluginVersion first, then Version
+      let match = csprojContent.match(/<PluginVersion>(.*?)<\/PluginVersion>/);
+      if (!match || !match[1]) {
+        match = csprojContent.match(/<Version>(.*?)<\/Version>/);
+      }
       if (match && match[1]) {
         version = match[1];
         core.info(`Found version in ${csprojFile}: ${version}`);
