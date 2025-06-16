@@ -88,7 +88,15 @@ runs:
           exit 1
         else
           echo "Plugin names match: $ps_plugin_name"
-          echo "plugin_name=$ps_plugin_name" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Set Plugin Name Output
+      shell: bash
+      run: |
+        if [ "${{ inputs.include_mc }}" = "true" ]; then
+          echo "plugin_name=$(grep -oPm1 '(?<=<PluginName>)[^<]+' < ${{ inputs.mc_csproj_path }})" >> $GITHUB_OUTPUT
+        elif [ "${{ inputs.include_ps }}" = "true" ]; then
+          echo "plugin_name=$(jq -r '.name' ${{ inputs.ps_path }}/package.json)" >> $GITHUB_OUTPUT
         fi
 
     - name: Create Change Log Env Path
