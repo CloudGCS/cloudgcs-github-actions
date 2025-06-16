@@ -29,6 +29,7 @@ runs:
   using: "composite"
   steps:
     - name: Check inputs
+      id: check-inputs
       shell: bash
       run: |
         if [ "${{ inputs.include_mc }}" = "true" ]; then
@@ -48,13 +49,13 @@ runs:
       id: get-mc-project-version
       uses: CloudGCS/cloudgcs-github-actions/get-project-version@1.0-get-project-version
       with:
-        project-version-file-full-path: ${{ inputs.mc_csproj_path }}
+        project-version-file-full-path: ./${{ inputs.mc_csproj_path }}
 
     - name: Get PS Project Version
       id: get-ps-project-version
       uses: CloudGCS/cloudgcs-github-actions/get-project-version@1.0-get-project-version
       with:
-        project-version-file-full-path: ${{ inputs.ps_path }}/package.json
+        project-version-file-full-path: ./${{ inputs.ps_path }}/package.json
 
     - name: Check MC and PS versions
       if: ${{ inputs.include_mc == 'true' && inputs.include_ps == 'true' }}
