@@ -50,8 +50,8 @@ runs:
         cd build-output
         zip -r "../$ZIP_NAME" ./*
 
-    - name: Upload artifact for Linux
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ steps.create-zip.outputs.zip_name }}
-        path: ./${{ steps.create-zip.outputs.zip_name }}
+        name: ${{ inputs.project_name }}-mc.zip
+        path: ./${{ inputs.project_name }}-mc.zip
