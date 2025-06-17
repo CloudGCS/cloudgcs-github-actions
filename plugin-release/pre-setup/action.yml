@@ -30,7 +30,7 @@ outputs:
     value: ${{ steps.set-plugin-name.outputs.plugin_name }}
   version:
     description: "Version of the plugin extracted from the MC and PS project files"
-    value: ${{ steps.check-mc-and-ps-versions.outputs.version }}
+    value: ${{ steps.set-version.outputs.version }}
 
 runs:
   using: "composite"
