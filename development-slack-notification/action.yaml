@@ -1,0 +1,55 @@
+name: "Slack Notification"
+description: "Send a development notification to Slack"
+
+inputs:
+  slack-bot-token:
+    description: "Slack bot token"
+    required: true
+  slack-channel-id:
+    description: "Slack channel ID"
+    required: true
+  author:
+    description: "Version info"
+    required: true
+  commit-message:
+    description: "Last commit message"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Post text to a Slack channel
+      uses: slackapi/slack-github-action@v2.0.0
+      with:
+        method: chat.postMessage
+        token: ${{ inputs.slack-bot-token }}
+        payload: |
+          {
+            "channel": "${{ inputs.slack-channel-id }}",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "New commit for ${{ github.repository }}!"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "_Author: ${{ inputs.author }}_"
+                }
+              },
+              {
+                "type": "divider"
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Last Commit Message:*\n${{ inputs.commit-message }}"
+                }
+              }
+            ]
+          }

@@ -35,4 +35,4 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.project_name }}-ps
-        path: ${{ inputs.ps_path }}/build/*.js
+        path: ./${{ inputs.ps_path }}/build/*.js

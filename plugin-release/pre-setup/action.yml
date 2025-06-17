@@ -30,36 +30,21 @@ outputs:
     value: ${{ steps.set-plugin-name.outputs.plugin_name }}
   version:
     description: "Version of the plugin extracted from the MC and PS project files"
-    value: ${{ steps.check-mc-and-ps-versions.outputs.version }}
+    value: ${{ steps.set-version.outputs.version }}
 
 runs:
   using: "composite"
   steps:
-    - name: Check inputs
-      id: check-inputs
-      shell: bash
-      run: |
-        if [ "${{ inputs.include_mc }}" = "true" ]; then
-          if [ -z "${{ inputs.mc_csproj_path }}" ] || [ -z "${{ inputs.mc_path }}" ]; then
-            echo "When include_mc is true, both mc_csproj_path and mc_path must be set."
-            exit 1
-          fi
-        fi
-        if [ "${{ inputs.include_ps }}" = "true" ]; then
-          if [ -z "${{ inputs.ps_path }}" ]; then
-            echo "When include_ps is true, ps_path must be set."
-            exit 1
-          fi
-        fi
-
     - name: Get MC Project Version
       id: get-mc-project-version
+      if: ${{ inputs.include_mc == 'true' }}
       uses: CloudGCS/cloudgcs-github-actions/get-project-version@1.1-get-project-version
       with:
         project-version-file-full-path: ./${{ inputs.mc_csproj_path }}
 
     - name: Get PS Project Version
       id: get-ps-project-version
+      if: ${{ inputs.include_ps == 'true' }}
       uses: CloudGCS/cloudgcs-github-actions/get-project-version@1.1-get-project-version
       with:
         project-version-file-full-path: ./${{ inputs.ps_path }}/package.json
@@ -77,7 +62,16 @@ runs:
           exit 1
         else
           echo "MC and PS versions match: $ps_plugin_version"
-          echo "version=$ps_plugin_version" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Set Version Output
+      id: set-version
+      shell: bash
+      run: |
+        if [ "${{ inputs.include_mc }}" = "true" ]; then
+          echo "version=${{ steps.get-mc-project-version.outputs.version }}" >> $GITHUB_OUTPUT
+        elif [ "${{ inputs.include_ps }}" = "true" ]; then
+          echo "version=${{ steps.get-ps-project-version.outputs.version }}" >> $GITHUB_OUTPUT
         fi
 
     - name: Check MC and PS Plugin Name
@@ -99,9 +93,9 @@ runs:
       shell: bash
       run: |
         if [ "${{ inputs.include_mc }}" = "true" ]; then
-          echo "plugin_name=$(grep -oPm1 '(?<=<PluginName>)[^<]+' < ${{ inputs.mc_csproj_path }})" >> $GITHUB_OUTPUT
+          echo "plugin_name=$(grep -oPm1 '(?<=<PluginName>)[^<]+' < ./${{ inputs.mc_csproj_path }})" >> $GITHUB_OUTPUT
         elif [ "${{ inputs.include_ps }}" = "true" ]; then
-          echo "plugin_name=$(jq -r '.name' ${{ inputs.ps_path }}/package.json)" >> $GITHUB_OUTPUT
+          echo "plugin_name=$(jq -r '.name' ./${{ inputs.ps_path }}/package.json)" >> $GITHUB_OUTPUT
         fi
 
     - name: Create Change Log Env Path
