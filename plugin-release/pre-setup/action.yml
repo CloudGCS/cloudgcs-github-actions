@@ -62,7 +62,16 @@ runs:
           exit 1
         else
           echo "MC and PS versions match: $ps_plugin_version"
-          echo "version=$ps_plugin_version" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Set Version Output
+      id: set-version
+      shell: bash
+      run: |
+        if [ "${{ inputs.include_mc }}" = "true" ]; then
+          echo "version=${{ steps.get-mc-project-version.outputs.version }}" >> $GITHUB_OUTPUT
+        elif [ "${{ inputs.include_ps }}" = "true" ]; then
+          echo "version=${{ steps.get-ps-project-version.outputs.version }}" >> $GITHUB_OUTPUT
         fi
 
     - name: Check MC and PS Plugin Name
