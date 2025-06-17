@@ -84,9 +84,9 @@ runs:
       shell: bash
       run: |
         if [ "${{ inputs.include_mc }}" = "true" ]; then
-          echo "plugin_name=$(grep -oPm1 '(?<=<PluginName>)[^<]+' < ${{ inputs.mc_csproj_path }})" >> $GITHUB_OUTPUT
+          echo "plugin_name=$(grep -oPm1 '(?<=<PluginName>)[^<]+' < ./${{ inputs.mc_csproj_path }})" >> $GITHUB_OUTPUT
         elif [ "${{ inputs.include_ps }}" = "true" ]; then
-          echo "plugin_name=$(jq -r '.name' ${{ inputs.ps_path }}/package.json)" >> $GITHUB_OUTPUT
+          echo "plugin_name=$(jq -r '.name' ./${{ inputs.ps_path }}/package.json)" >> $GITHUB_OUTPUT
         fi
 
     - name: Create Change Log Env Path
