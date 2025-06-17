@@ -1,0 +1,38 @@
+name: "Build PS Plugin"
+description: "Builds the Pilot Station plugin and uploads as an artifact."
+inputs:
+  ps_path:
+    description: "Path to the Pilot Station plugin directory"
+    required: true
+  project_name:
+    description: "Project name for the artifact"
+    required: true
+
+outputs:
+  artifact_name:
+    description: "Name of the uploaded artifact"
+    value: ${{ inputs.project_name }}-ps
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 20
+
+    - name: Install Dependencies
+      shell: bash
+      run: yarn install
+      working-directory: ${{ inputs.ps_path }}
+
+    - name: Build Release
+      shell: bash
+      run: yarn action-build
+      working-directory: ${{ inputs.ps_path }}
+
+    - name: Upload Pilot Station Plugin Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.project_name }}-ps
+        path: ${{ inputs.ps_path }}/build/*.js
