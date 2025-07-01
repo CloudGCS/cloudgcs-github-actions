@@ -43,13 +43,13 @@ runs:
               },
               {
                 "type": "divider"
-              }#,
-              #{
-              #  "type": "section",
-              #  "text": {
-              #    "type": "mrkdwn",
-              #    "text": "*Last Commit Message:*\n${{ inputs.commit-message }}"
-              #  }
-              #}
+              }
             ]
-          }
+          }   
+      #{
+      #  "type": "section",
+      #  "text": {
+      #    "type": "mrkdwn",
+      #    "text": "*Last Commit Message:*\n${{ inputs.commit-message }}"
+      #  }
+      #}
