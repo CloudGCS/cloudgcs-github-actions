@@ -1,0 +1,161 @@
+name: Release Plugin
+
+on:
+  workflow_dispatch:
+    inputs:
+      notify-slack:
+        description: "Enable Slack notifications (ensure change log file exists with version number under change-logs directory)"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+env:
+  include_mc: false
+  include_ps: true
+  ps_path: ""
+  mc_path: ""
+  mc_csproj_path: ""
+
+jobs:
+  pre-setup:
+    name: Pre-Setup and Validation
+    runs-on: ubuntu-latest
+    outputs:
+      include_ps: ${{ steps.set-vars.outputs.include_ps }}
+      include_mc: ${{ steps.set-vars.outputs.include_mc }}
+      plugin_version: ${{ steps.pre-setup.outputs.version }}
+      plugin_name: ${{ steps.pre-setup.outputs.plugin_name }}
+      change_log_file_full_path: ${{ steps.pre-setup.outputs.change_log_file_full_path }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Variables
+        id: set-vars
+        run: |
+          echo "include_ps=${{ env.include_ps }}" >> $GITHUB_OUTPUT
+          echo "include_mc=${{ env.include_mc }}" >> $GITHUB_OUTPUT
+
+      - name: Pre Setup Checks for Plugin Release
+        id: pre-setup
+        uses: CloudGCS/cloudgcs-github-actions/plugin-release/pre-setup@1.0-plugin-release/pre-setup
+        with:
+          include_mc: ${{ env.include_mc }}
+          include_ps: ${{ env.include_ps }}
+          ps_path: ${{ env.ps_path }}
+          mc_path: ${{ env.mc_path }}
+          mc_csproj_path: ${{ env.mc_csproj_path }}
+          notify-slack: ${{ github.event.inputs.notify-slack }}
+
+  build-ps-plugin:
+    name: Build PowerShell Plugin
+    runs-on: ubuntu-latest
+    needs: [pre-setup]
+    if: ${{ needs.pre-setup.outputs.include_ps == 'true' }}
+    outputs:
+      artifact_name: ${{ steps.build-and-upload-ps.outputs.artifact_name }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Debug Environment Variables
+        run: |
+          echo "PS Path: ${{ env.ps_path }}"
+          echo "Plugin Name: ${{ needs.pre-setup.outputs.plugin_name }}"
+
+      - name: Build and Upload PS Plugin Artifact
+        id: build-and-upload-ps
+        uses: CloudGCS/cloudgcs-github-actions/plugin-release/build-ps@1.0-plugin-release/build-ps
+        with:
+          project_name: ${{ needs.pre-setup.outputs.plugin_name }}
+          ps_path: ${{ env.ps_path }}
+
+  build-mc-plugin:
+    name: Build Management Console Plugin
+    runs-on: ubuntu-latest
+    needs: [pre-setup]
+    if: ${{ needs.pre-setup.outputs.include_mc == 'true' }}
+    outputs:
+      artifact_name: ${{ steps.build-and-upload-mc.outputs.artifact_name }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build and Upload MC Plugin Artifact
+        id: build-and-upload-mc
+        uses: CloudGCS/cloudgcs-github-actions/plugin-release/build-mc@1.1-plugin-release/build-mc
+        with:
+          project_name: ${{ needs.pre-setup.outputs.plugin_name }}
+          mc_path: ${{ env.mc_path }}
+          mc_csproj_path: ${{ env.mc_csproj_path }}
+          github-token: ${{ secrets.PASSWORD }}
+          github-username: ${{ secrets.USERNAME }}
+          version: ${{ needs.pre-setup.outputs.plugin_version }}
+
+  publish-release:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    needs: [pre-setup, build-ps-plugin, build-mc-plugin]
+    if: |
+      always() &&
+      needs.pre-setup.result == 'success' &&
+      (needs.build-ps-plugin.result == 'success' || needs.build-ps-plugin.result == 'skipped') &&
+      (needs.build-mc-plugin.result == 'success' || needs.build-mc-plugin.result == 'skipped') &&
+      (needs.build-ps-plugin.result == 'success' || needs.build-mc-plugin.result == 'success')
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Publish Release with Artifacts
+        id: publish-release
+        uses: CloudGCS/cloudgcs-github-actions/plugin-release/publish-release@1.0-plugin-release/publish-release
+        with:
+          include_mc: ${{ needs.pre-setup.outputs.include_mc }}
+          include_ps: ${{ needs.pre-setup.outputs.include_ps }}
+          ps_plugin_build_name: ${{ needs.build-ps-plugin.outputs.artifact_name }}
+          mc_plugin_build_name: ${{ needs.build-mc-plugin.outputs.artifact_name }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          version: ${{ needs.pre-setup.outputs.plugin_version }}
+
+      - name: Upload Change Log to Release
+        if: ${{ needs.pre-setup.outputs.change_log_file_full_path != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CHANGE_LOG_PATH="${{ needs.pre-setup.outputs.change_log_file_full_path }}"
+          VERSION="${{ needs.pre-setup.outputs.plugin_version }}"
+
+          if [ -f "$CHANGE_LOG_PATH" ]; then
+            echo "Uploading change log file to release v$VERSION"
+            gh release upload "v$VERSION" "$CHANGE_LOG_PATH" --clobber
+            echo "✅ Change log uploaded successfully"
+          else
+            echo "⚠️ Change log file not found at: $CHANGE_LOG_PATH"
+          fi
+
+  notify-slack-channel:
+    name: Notify Slack Channel
+    runs-on: ubuntu-latest
+    needs: [pre-setup, publish-release]
+    if: |
+      github.event.inputs.notify-slack == 'true' &&
+      needs.publish-release.result == 'success'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Send Slack Notification
+        uses: CloudGCS/cloudgcs-github-actions/slack-notification@1.0-slack-notification
+        with:
+          change-log-file-full-path: ${{ needs.pre-setup.outputs.change_log_file_full_path }}
+          version: ${{ needs.pre-setup.outputs.plugin_version }}
+          slack-channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
