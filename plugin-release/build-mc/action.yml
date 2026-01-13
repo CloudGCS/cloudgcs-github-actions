@@ -16,11 +16,14 @@ inputs:
   github-token:
     description: "GitHub token or password for NuGet source"
     required: true
+  version:
+    description: "Version number to include in the zip file name"
+    required: true
 
 outputs:
   artifact_name:
     description: "Name of the uploaded artifact"
-    value: "${{ inputs.project_name }}-mc"
+    value: "${{ inputs.project_name }}-mc-${{ inputs.version }}"
 
 runs:
   using: "composite"
@@ -45,7 +48,7 @@ runs:
       id: create-zip
       shell: bash
       run: |
-        ZIP_NAME="${{ inputs.project_name }}-mc.zip"
+        ZIP_NAME="${{ inputs.project_name }}-mc-${{ inputs.version }}.zip"
         echo "zip_name=$ZIP_NAME" >> GITHUB_OUTPUT
         cd build-output
         zip -r "../$ZIP_NAME" ./*
@@ -53,5 +56,5 @@ runs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.project_name }}-mc
-        path: ./${{ inputs.project_name }}-mc.zip
+        name: ${{ inputs.project_name }}-mc-${{ inputs.version }}
+        path: ./${{ inputs.project_name }}-mc-${{ inputs.version }}.zip

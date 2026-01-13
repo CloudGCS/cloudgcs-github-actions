@@ -1,4 +1,4 @@
-# Plugin Release Workflow
+ # Plugin Release Workflow
 
 This workflow builds and releases Mission Controller (MC) and Pilot Station (PS) plugins. It supports building one or both plugins and publishing a GitHub release with artifacts.
 
@@ -8,164 +8,80 @@ This workflow builds and releases Mission Controller (MC) and Pilot Station (PS)
 
 - Manual trigger via `workflow_dispatch`.
 - Input:
-  - `notify-slack` (boolean) — enables Slack notifications (requires changelog file).
+  - `notify-slack` — Enable Slack notifications (choice: `true`/`false`, default: `true`). Ensure a change log file exists with the version number under the `change-logs` directory when enabling notifications.
 
 ---
 
-## Environment Variables
+## Environment Variables (defaults)
 
-| Variable         | Description                                    |
-| ---------------- | ---------------------------------------------- |
-| `include_mc`     | Whether to include MC plugin in the build.     |
-| `include_ps`     | Whether to include PS plugin in the build.     |
-| `ps_path`        | Path to the Pilot Station plugin.              |
-| `mc_path`        | Path to the Mission Controller plugin.         |
-| `mc_csproj_path` | Path to the Mission Controller `.csproj` file. |
+| Variable         |  Description                                    |
+| ---------------- |  ---------------------------------------------- |
+| `include_mc`     |  Whether to include the MC plugin in the build. |
+| `include_ps`     |  Whether to include the PS plugin in the build. |
+| `ps_path`        |  Path to the Pilot Station plugin.              |
+| `mc_path`        |  Path to the Mission Controller plugin.         |
+| `mc_csproj_path` |  Path to the Mission Controller `.csproj` file. |
 
 ---
 
 ## Jobs
 
-### 1. Pre-Setup
+### Pre-Setup and Validation
 
-- [Pre-Setup Documentation](./pre-setup/README.md)
+- Runs pre-release validation and sets outputs used by downstream jobs.
+- Outputs include: `include_ps`, `include_mc`, `plugin_version`, `plugin_name`, and `change_log_file_full_path`.
+- See [pre-setup/README.md](pre-setup/README.md).
 
-### 2. Build PS Plugin
+### Build PowerShell Plugin (PS)
 
-- Set the `include_ps` is `true` if your reposityor includes pilot station plugin
-- [Build PS Plugin Documentation](./build-ps/README.md)
+- Runs when `include_ps` is `true` (set via env or pre-setup output).
+- Uses: `plugin-release/build-ps@1.0-plugin-release/build-ps`.
+- Produces a PS artifact name output used by the publish step.
+- See [build-ps/README.md](build-ps/README.md).
 
-### 3. Build MC Plugin
+### Build Management Console Plugin (MC)
 
-- Set the `include_mc` is `true` if your reposityor includes mission controller plugin
-- [Build MC Plugin Documentation](./build-mc/README.md)
+- Runs when `include_mc` is `true`.
+- Uses: `plugin-release/build-mc@1.1-plugin-release/build-mc` (passes `version` from pre-setup).
+- Produces an MC artifact name output used by the publish step.
+- See [build-mc/README.md](build-mc/README.md).
 
-### 4. Publish Release
+### Publish Release
 
-- [Publish Release Documentation](./publish-release/README.md)
+- Publishes a GitHub release with available artifacts. Conditional logic ensures publish runs only after successful or skipped builds as appropriate.
+- Uploads the change log to the release when available.
+- Uses: `plugin-release/publish-release@1.0-plugin-release/publish-release`.
+- See [publish-release/README.md](publish-release/README.md).
+
+### Notify Slack Channel
+
+- Optionally sends a Slack notification when `notify-slack` is `true` and the publish step succeeds.
+- Uses: `slack-notification@1.0-slack-notification` and requires `SLACK_BOT_TOKEN` and `SLACK_CHANNEL_ID` secrets.
 
 ---
 
 ## Secrets
 
-- `PASSWORD` and `USERNAME` for MC build authentication.
-- `GITHUB_TOKEN` for GitHub release publishing.
+- `PASSWORD` and `USERNAME` — used for MC build authentication when building MC.
+- `GITHUB_TOKEN` — used for GitHub release publishing and upload.
+- `SLACK_BOT_TOKEN` and `SLACK_CHANNEL_ID` — required for Slack notifications.
 
 ---
 
 ## Notes
 
-- Supports building MC only, PS only, or both.
-- Validates version consistency between MC and PS plugins.
-- Requires changelog file if Slack notifications enabled.
+- Workflow supports building MC only, PS only, or both.
+- Pre-setup validates plugin versions and resolves the change log file used by notifications and release uploads.
 
 ---
 
 ## Usage Example
 
-```yaml
-name: Release Test Workflow
+- See the sample workflow at `plugin-release/sample.yaml` for a ready-to-use `workflow_dispatch` example.
 
-on:
-  workflow_dispatch:
-    inputs:
-      notify-slack:
-        description: "Please set this to true to enable Slack notifications. Ensure that a change log file is created with version number under the change-logs directory"
-        required: true
-        default: "true"
+- What the sample covers (summary):
+  - Input: `notify-slack` (choice `true`/`false`, default `true`).
+  - Default env values: `include_mc: false`, `include_ps: true`, empty plugin paths.
+  - Key jobs: `pre-setup` (validates and sets outputs), `build-ps` (PS artifact), `build-mc` (MC artifact — uses `version`), `publish-release` (creates release and uploads changelog), and optional `notify-slack`.
 
-env:
-  include_mc: true
-  include_ps: true
-  ps_path: VideoStream-UIPlugin
-  mc_path: VideoStream-MCPlugin/MC.Plugin.VideoStream
-  mc_csproj_path: VideoStream-MCPlugin/MC.Plugin.VideoStream/MC.Plugin.VideoStream.csproj
-
-jobs:
-  pre-setup:
-    runs-on: ubuntu-latest
-    outputs:
-      include_ps: ${{ steps.set-vars.outputs.include_ps }}
-      include_mc: ${{ steps.set-vars.outputs.include_mc }}
-      plugin_version: ${{ steps.pre-setup.outputs.version }}
-      plugin_name: ${{ steps.pre-setup.outputs.plugin_name }}
-      change_log_file_full_path: ${{ steps.pre-setup.outputs.change_log_file_full_path }}
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set Variables
-        id: set-vars
-        run: |
-          echo "include_ps=${{ env.include_ps }}" >> $GITHUB_OUTPUT
-          echo "include_mc=${{ env.include_mc }}" >> $GITHUB_OUTPUT
-      - name: Pre Setup Checks for Plugin Release
-        id: pre-setup
-        uses: CloudGCS/cloudgcs-github-actions/plugin-release/pre-setup@1.0-plugin-release/pre-setup
-        with:
-          include_mc: ${{ env.include_mc }}
-          include_ps: ${{ env.include_ps }}
-          ps_path: ${{ env.ps_path }}
-          mc_path: ${{ env.mc_path }}
-          mc_csproj_path: ${{ env.mc_csproj_path }}
-          notify-slack: ${{ github.event.inputs.notify-slack }}
-
-  build-ps-plugin:
-    runs-on: ubuntu-latest
-    needs: [pre-setup]
-    if: ${{ needs.pre-setup.outputs.include_ps == 'true' }}
-    outputs:
-      artifact_name: ${{ steps.build-and-upload-ps.outputs.artifact_name }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Debug Environment Variables
-        run: |
-          echo "PS Path: ${{ env.ps_path }}"
-          echo "Plugin Name: ${{ needs.pre-setup.outputs.plugin_name }}"
-      - name: Build and Upload PS Plugin Artifact
-        id: build-and-upload-ps
-        uses: CloudGCS/cloudgcs-github-actions/plugin-release/build-ps@1.0-plugin-release/build-ps
-        with:
-          project_name: ${{ needs.pre-setup.outputs.plugin_name }}
-          ps_path: ${{ env.ps_path }}
-
-  build-mc-plugin:
-    runs-on: ubuntu-latest
-    if: ${{ needs.pre-setup.outputs.include_mc == 'true' }}
-    needs: [pre-setup]
-    outputs:
-      artifact_name: ${{ steps.build-and-upload-mc.outputs.artifact_name }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Build and Upload MC Plugin Artifact
-        id: build-and-upload-mc
-        uses: CloudGCS/cloudgcs-github-actions/plugin-release/build-mc@1.0-plugin-release/build-mc
-        with:
-          project_name: ${{ needs.pre-setup.outputs.plugin_name }}
-          mc_path: ${{ env.mc_path }}
-          mc_csproj_path: ${{ env.mc_csproj_path }}
-          github-token: ${{ secrets.PASSWORD }}
-          github-username: ${{ secrets.USERNAME }}
-
-  upload-artifacts:
-    runs-on: ubuntu-latest
-    needs: [pre-setup, build-ps-plugin, build-mc-plugin]
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name:
-        uses: CloudGCS/cloudgcs-github-actions/plugin-release/publish-release@1.0-plugin-release/publish-release
-        with:
-          include_mc: ${{ needs.pre-setup.outputs.include_mc }}
-          include_ps: ${{ needs.pre-setup.outputs.include_ps }}
-          ps_plugin_build_name: ${{ needs.build-ps-plugin.outputs.artifact_name }}
-          mc_plugin_build_name: ${{ needs.build-mc-plugin.outputs.artifact_name }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          version: ${{ needs.pre-setup.outputs.plugin_version }}
-```
+Refer to [sample.yaml](sample.yaml) for the exact workflow and step wiring.

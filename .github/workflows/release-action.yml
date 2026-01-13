@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version number (e.g. v1.2.3)"
+        description: "Version number (e.g. 1.1 / 2.21)"
         required: true
         type: string
       action:
-        description: "Action folder name (e.g. slack-notifier)"
+        description: "Action folder path (e.g. plugins-release/build-mc)"
         required: true
         type: string
 
