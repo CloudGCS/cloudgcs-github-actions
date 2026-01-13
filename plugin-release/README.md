@@ -14,13 +14,13 @@ This workflow builds and releases Mission Controller (MC) and Pilot Station (PS)
 
 ## Environment Variables (defaults)
 
-| Variable         | Default | Description                                    |
-| ---------------- | ------- | ---------------------------------------------- |
-| `include_mc`     | `false` | Whether to include the MC plugin in the build. |
-| `include_ps`     | `true`  | Whether to include the PS plugin in the build. |
-| `ps_path`        | `""`   | Path to the Pilot Station plugin.              |
-| `mc_path`        | `""`   | Path to the Mission Controller plugin.         |
-| `mc_csproj_path` | `""`   | Path to the Mission Controller `.csproj` file. |
+| Variable         |  Description                                    |
+| ---------------- |  ---------------------------------------------- |
+| `include_mc`     |  Whether to include the MC plugin in the build. |
+| `include_ps`     |  Whether to include the PS plugin in the build. |
+| `ps_path`        |  Path to the Pilot Station plugin.              |
+| `mc_path`        |  Path to the Mission Controller plugin.         |
+| `mc_csproj_path` |  Path to the Mission Controller `.csproj` file. |
 
 ---
 
