@@ -52,7 +52,7 @@ jobs:
           notify-slack: ${{ github.event.inputs.notify-slack }}
 
   build-ps-plugin:
-    name: Build PowerShell Plugin
+    name: Build PS Plugin
     runs-on: ubuntu-latest
     needs: [pre-setup]
     if: ${{ needs.pre-setup.outputs.include_ps == 'true' }}
@@ -76,7 +76,7 @@ jobs:
           ps_path: ${{ env.ps_path }}
 
   build-mc-plugin:
-    name: Build Management Console Plugin
+    name: Build MC Plugin
     runs-on: ubuntu-latest
     needs: [pre-setup]
     if: ${{ needs.pre-setup.outputs.include_mc == 'true' }}
@@ -126,27 +126,24 @@ jobs:
 
       - name: Upload Change Log to Release
         if: ${{ needs.pre-setup.outputs.change_log_file_full_path != '' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          CHANGE_LOG_PATH="${{ needs.pre-setup.outputs.change_log_file_full_path }}"
-          VERSION="${{ needs.pre-setup.outputs.plugin_version }}"
-
-          if [ -f "$CHANGE_LOG_PATH" ]; then
-            echo "Uploading change log file to release v$VERSION"
-            gh release upload "v$VERSION" "$CHANGE_LOG_PATH" --clobber
-            echo "✅ Change log uploaded successfully"
-          else
-            echo "⚠️ Change log file not found at: $CHANGE_LOG_PATH"
-          fi
+        uses: svenstaro/upload-release-action@v2
+        with:
+          release_name: "Release ${{ needs.pre-setup.outputs.plugin_version }}"
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ needs.pre-setup.outputs.change_log_file_full_path }}
+          tag: ${{ needs.pre-setup.outputs.plugin_version }}
+          file_glob: true
+          overwrite: false
 
   notify-slack-channel:
     name: Notify Slack Channel
     runs-on: ubuntu-latest
     needs: [pre-setup, publish-release]
     if: |
+      always() &&
       github.event.inputs.notify-slack == 'true' &&
-      needs.publish-release.result == 'success'
+      needs.publish-release.result == 'success' &&
+      needs.pre-setup.result == 'success'
 
     steps:
       - name: Checkout Repository
