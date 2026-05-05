@@ -34,20 +34,93 @@ runs:
         else
           RELEASE_LINK="$RELEASE_NAME"
         fi
-        echo "RELEASE_LINK=$RELEASE_LINK" >> $GITHUB_ENV
+        echo "release_link=$RELEASE_LINK" >> $GITHUB_OUTPUT
 
-    - name: Read version file
-      id: read-version-content
+    - name: Prepare Slack payload content
+      id: prepare-slack-payload-content
       shell: bash
+      env:
+        CHANGE_LOG_FILE_FULL_PATH: ${{ inputs.change-log-file-full-path }}
+        VERSION: ${{ inputs.version }}
+        RELEASE_LINK: ${{ steps.prepare-release-link.outputs.release_link }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
       run: |
-        if [ -f "${{ inputs.change-log-file-full-path }}" ]; then
+        if [ -f "$CHANGE_LOG_FILE_FULL_PATH" ]; then
           echo "Given Change Log File Path Exists. Reading the file..."
         else
           echo "Given Change Log File Path Does Not Exist!"
           exit 1
         fi
-        VERSION_CONTENT=$(jq -Rs '.' < "${{ inputs.change-log-file-full-path }}")
-        echo "VERSION_CONTENT=$VERSION_CONTENT" >> $GITHUB_ENV
+
+        SLACK_FALLBACK_TEXT=$(jq -cn \
+          --arg text "New version $VERSION is released for $GITHUB_REPOSITORY! Release link: $RELEASE_LINK" \
+          '$text')
+
+        SLACK_BLOCKS=$(jq -cn \
+          --arg repository "$GITHUB_REPOSITORY" \
+          --arg version "$VERSION" \
+          --arg release_link "$RELEASE_LINK" \
+          --rawfile version_content "$CHANGE_LOG_FILE_FULL_PATH" \
+          '
+          def chunk_size: 2900;
+          def chunks:
+            [range(0; length; chunk_size) as $i | .[$i:($i + chunk_size)]];
+
+          ($version_content | chunks) as $change_log_chunks |
+          [
+            {
+              "type": "header",
+              "text": {
+                "type": "plain_text",
+                "text": "New version is released for \($repository)!"
+              }
+            },
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "_Version Info: \($version)_"
+              }
+            },
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "_Release Link: _<\($release_link)>"
+              }
+            },
+            {
+              "type": "divider"
+            }
+          ] + (
+            if ($change_log_chunks | length) > 46 then
+              ($change_log_chunks[:45] | map({
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": .
+                }
+              })) + [{
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "_Change log truncated because Slack messages support a maximum of 50 blocks._"
+                }
+              }]
+            else
+              $change_log_chunks | map({
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": .
+                }
+              })
+            end
+          )
+          ')
+
+        echo "slack_fallback_text=$SLACK_FALLBACK_TEXT" >> $GITHUB_OUTPUT
+        echo "slack_blocks=$SLACK_BLOCKS" >> $GITHUB_OUTPUT
 
     - name: Post text to a Slack channel
       uses: slackapi/slack-github-action@v2.0.0
@@ -57,37 +130,6 @@ runs:
         payload: |
           {
             "channel": "${{ inputs.slack-channel-id }}",
-            "blocks": [
-              {
-                "type": "header",
-                "text": {
-                  "type": "plain_text",
-                  "text": "New version is released for ${{ github.repository }}!"
-                }
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "_Version Info: ${{ inputs.version }}_"
-                }
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "_Release Link: _<${{ env.RELEASE_LINK }}>"
-                }
-              },
-              {
-                "type": "divider"
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": ${{ env.VERSION_CONTENT }}
-                }
-              }
-            ]
+            "text": ${{ steps.prepare-slack-payload-content.outputs.slack_fallback_text }},
+            "blocks": ${{ steps.prepare-slack-payload-content.outputs.slack_blocks }}
           }
