@@ -11,14 +11,32 @@ inputs:
   author:
     description: "Version info"
     required: true
-  commit-message:
-    description: "Last commit message"
+  change-log-file-full-path:
+    description: "Change log file path"
     required: true
 
 runs:
   using: "composite"
   steps:
-    - name: Post text to a Slack channel
+    # 🔥 CHANGELOG OKU + SPLIT
+    - name: Read and split changelog
+      id: changelog
+      shell: bash
+      run: |
+        FILE="${{ inputs.change-log-file-full-path }}"
+
+        CONTENT=$(cat "$FILE")
+
+        echo "part1<<EOF" >> $GITHUB_OUTPUT
+        echo "$CONTENT" | head -c 2900 >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+        echo "part2<<EOF" >> $GITHUB_OUTPUT
+        echo "$CONTENT" | tail -c +2901 | head -c 2900 >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    # 🔥 SLACK MESAJI
+    - name: Send to Slack
       uses: slackapi/slack-github-action@v2.0.0
       with:
         method: chat.postMessage
@@ -26,12 +44,14 @@ runs:
         payload: |
           {
             "channel": "${{ inputs.slack-channel-id }}",
+            "text": "New release notification",
+
             "blocks": [
               {
                 "type": "header",
                 "text": {
                   "type": "plain_text",
-                  "text": "New commit for ${{ github.repository }}!"
+                  "text": "New release for ${{ github.repository }}"
                 }
               },
               {
@@ -43,13 +63,21 @@ runs:
               },
               {
                 "type": "divider"
+              },
+
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "${{ steps.changelog.outputs.part1 }}"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "${{ steps.changelog.outputs.part2 }}"
+                }
               }
             ]
-          }   
-      #{
-      #  "type": "section",
-      #  "text": {
-      #    "type": "mrkdwn",
-      #    "text": "*Last Commit Message:*\n${{ inputs.commit-message }}"
-      #  }
-      #}
+          }
